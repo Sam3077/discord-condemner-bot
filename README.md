@@ -27,3 +27,7 @@ You'll need to do this before testing you local code or if you want to create yo
 }
 ```
 - Finally, reference https://discord.com/developers/docs/topics/oauth2#bots to create a link to add your new bot to a server!
+
+## Known issues
+- the list of condemn actions is not persistent
+    - If the bot is updated while someone is actively condemned, all data will be lost including the time to release them and the roles to restate after release

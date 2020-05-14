@@ -6,4 +6,9 @@ interface CondemnAction {
     timeout?: NodeJS.Timeout
 }
 
+function isCondemnAction(obj: any): obj is CondemnAction {
+    return obj.user !== undefined && obj.restateRoles !== undefined;
+}
+
 export default CondemnAction;
+export {isCondemnAction};

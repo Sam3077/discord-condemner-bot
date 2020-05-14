@@ -5,16 +5,18 @@ import storage from 'node-persist';
 
 export default class GuildManager {
     private STORAGE_PATH = './data/guild-configs'
+    private guildStorage: storage.LocalStorage;
 
     constructor() {
-        storage.init({
-            dir: this.STORAGE_PATH,
+        this.guildStorage = storage.create({
+            dir: this.STORAGE_PATH
         });
+        this.guildStorage.init();
     }
 
     connect = async (guild: Discord.Guild) => {
         try {
-            await storage.setItem(guild.id, {initialized: false});
+            await this.guildStorage.setItem(guild.id, {initialized: false});
             return true;
         } catch(e) {
             return false;
@@ -23,7 +25,7 @@ export default class GuildManager {
 
     disconnect = async (guild: Discord.Guild) => {
         try {
-            await storage.removeItem(guild.id)
+            await this.guildStorage.removeItem(guild.id)
             return true;
         } catch(e) {
             return false;
@@ -32,7 +34,7 @@ export default class GuildManager {
 
     getConfig = async (guild: Discord.Guild) => {
         try {
-            const config = await storage.getItem(guild.id)
+            const config = await this.guildStorage.getItem(guild.id)
             if (isSettings(config)) {
                 return config;
             } else {
@@ -100,7 +102,7 @@ export default class GuildManager {
             "free-photo": freeAttach?.attachment.toString()
         }
 
-        await storage.setItem(guild.id, settings);
+        await this.guildStorage.setItem(guild.id, settings);
         await channel.send(`Great! Everything's set up on my end.
 Now go set the permissions on the role, ${role.name}, to whatever you want to restrict access to!
 
