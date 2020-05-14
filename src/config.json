@@ -1,0 +1,9 @@
+{
+    "prefix": "!condemner",
+    "arrest-command": "condemn",
+    "admin-arrest": "admin-condemn",
+    "free-command": "release",
+    "admin-free": "admin-release",
+    "init-command": "init",
+    "help-command": "help"
+}

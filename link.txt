@@ -1,0 +1,3 @@
+distr = https://discord.com/oauth2/authorize?client_id=710031052424609833&scope=bot&permissions=268470272
+
+test = https://discord.com/oauth2/authorize?client_id=710586800925835334&scope=bot&permissions=268470272
