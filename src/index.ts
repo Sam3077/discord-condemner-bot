@@ -140,4 +140,4 @@ ${config.prefix} ${config['admin-free']} @user: Same as ${config['free-command']
     await msg.reply(`Unknown command: ${command}. Type \`${config.prefix} ${config["help-command"]}\` for a list of available commands`);
 });
 
-client.login(privateConfig["test-token"]);
+client.login(privateConfig["token"]);

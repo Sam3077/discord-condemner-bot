@@ -78,6 +78,7 @@ export default class RoleManager {
             const sent = await msg.channel.send(`Shall ${action.user.displayName} be released from ${config["jail-role"]}? You have 1 minute to react to this message to vote.`);
             if (!(await this.vote(sent))) {
                 msg.channel.send(`Vote has failed. ${action.user.displayName} will not be released from ${config["jail-role"]}`)
+                return;
             }
         }
         if(action.timeout) {
