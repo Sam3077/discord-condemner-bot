@@ -1,18 +1,19 @@
-import Discord from 'discord.js';
+import Discord, { Role } from 'discord.js';
 import config from './config.json';
 import privateConfig from './private-config.json';
 import RoleManager from './managers/RoleManager';
 import GuildManager from './managers/GuildManager';
 import { isDefinedSettings } from './models/settings';
 
-// const img = require('../static/horny-jail.jpg');
-
 const client = new Discord.Client();
-const manager = new RoleManager();
+let manager: RoleManager;
 const guildManager = new GuildManager();
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user?.tag}!`);
+    // the role manager can attempt to send a message immediately after initialization
+    // so wait until the client is ready
+    manager = new RoleManager(client);
 });
 
 client.on('guildCreate', guild => {
@@ -140,4 +141,26 @@ ${config.prefix} ${config['admin-free']} @user: Same as ${config['free-command']
     await msg.reply(`Unknown command: ${command}. Type \`${config.prefix} ${config["help-command"]}\` for a list of available commands`);
 });
 
-client.login(privateConfig["token"]);
+process.on('beforeExit', async (code) => {
+    await manager.dumpStateToStorage();
+    process.exit(code);
+});
+process.on('SIGINT', async () => {
+    await manager.dumpStateToStorage();
+    process.exit();
+});
+process.on('SIGUSR1', async () => {
+    await manager.dumpStateToStorage();
+    process.exit();
+});
+process.on('SIGUSR2', async () => {
+    await manager.dumpStateToStorage();
+    process.exit();
+});
+process.on('uncaughtException', async (e) => {
+    console.error(e);
+    await manager.dumpStateToStorage();
+    process.exit();
+});
+
+client.login(privateConfig['test-token']);

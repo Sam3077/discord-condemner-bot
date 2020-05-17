@@ -7,3 +7,4 @@ discord-condemner.pem
 src/private-config.json
 distr.zip
 create-archive.sh
+.vscode/

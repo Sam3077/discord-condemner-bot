@@ -1,18 +1,100 @@
 import Discord from 'discord.js';
-import CondemnAction from '../models/condemnAction';
+import CondemnAction, {SerailizeableCondemnAction, toSerailizeableCondemnAction, isCondemnAction, isSerializeableCondemnAction} from '../models/condemnAction';
 import {DefinedSettings} from '../models/settings';
+import storage from 'node-persist';
 
 export default class RoleManager {
-    jail: Map<string, CondemnAction>;
+    private jail: Map<string, CondemnAction>;
+    private actionStorage: storage.LocalStorage;
+    private STORAGE_PATH = "./data/condemn-actions"
+    private ready: Promise<void>;
 
-    constructor() {
+    constructor(client: Discord.Client) {
         this.jail = new Map();
+        this.actionStorage = storage.create({
+            dir: this.STORAGE_PATH
+        });
+        this.actionStorage.init();
+
+        let onReady: () => void;
+        this.ready = new Promise((resolve) => {onReady = resolve});
+        this.rebuildState(client).then(() => {
+            onReady();
+        });
+    }
+
+    dumpStateToStorage = async () => {
+        console.log('dumping');
+        await this.ready;
+
+        const promises: Promise<storage.WriteFileResult>[] = [];
+        this.jail.forEach((action, key) => {
+            promises.push(this.actionStorage.setItem(key, toSerailizeableCondemnAction(action)));
+        });
+        return Promise.all(promises);
+    }
+
+    private rebuildState = async (client: Discord.Client) => {
+        const data = await this.actionStorage.data();
+        const promises = data.map(async d => {
+            const action = d.value;
+            if (!isSerializeableCondemnAction(action)) return;
+
+            const guild = client.guilds.resolve(action.guildID)
+            if (!guild) {
+                console.log("guild not found");
+                return;
+            }
+            const member = guild.members.resolve(action.userID);
+            if (!member) {
+                console.log("member not found");
+                return;
+            }
+            const channel = guild.channels.resolve(action.channelID);
+            if (!channel) {
+                console.log("channel not found");
+                return;
+            }
+            if (channel.type !== 'text') {
+                console.log("not a text channel :(");
+                return;
+            }
+            const message = await (channel as Discord.TextChannel).messages.fetch(action.msgID);
+            if (!message) {
+                console.log("message not found");
+                return;
+            }
+            const roles = action.roleIDs.map(r => {
+                const temp = guild.roles.resolve(r);
+                if (!temp) {
+                    console.log('role not found');
+                }
+                return temp;
+            }).filter(r => r !== null);
+
+            let obj: CondemnAction = d.value;
+            obj.user = member;
+            obj.msg = message;
+            obj.restateRoles = roles as Discord.Role[];
+            if (obj.fireTime) {
+                const delay = obj.fireTime - Date.now();
+                obj.timeout = setTimeout(async () => {
+                    await this.release(obj.user, obj.msg, obj.config, false);
+                }, delay);
+            }
+
+            this.jail.set(d.key, obj);
+        });
+
+        await Promise.all(promises);
+        return this.actionStorage.clear();
     }
 
     arrest = async (user: Discord.GuildMember, guild: Discord.Guild,
             msg: Discord.Message, config: DefinedSettings,
             time?: number, doVote: boolean = false) => {
-        
+        await this.ready;
+
         const role = guild.roles.cache.find(role => role.name == config["jail-role"]);
         if (!role) {
             msg.reply(`I can't find the ${config["jail-role"]} role. Check your configuration.`);
@@ -29,8 +111,10 @@ export default class RoleManager {
 
         const key = guild.id + user.id;
         let action: CondemnAction = {
-            user: user,
-            restateRoles: user.roles.cache.array()
+            restateRoles: user.roles.cache.array(),
+            user,
+            msg,
+            config
         };
 
         // if they're already in jail, maintain their roles
@@ -57,9 +141,11 @@ export default class RoleManager {
         let txt = `${user.displayName} has been condemned to ${config["jail-role"]}`;
         if (time && !Number.isNaN(time)) {
             txt += ` for ${time} minute${time > 1 ? 's' : ''}`;
+            const timeInMs = time * 60 * 1000;
+            action.fireTime = Date.now() + timeInMs;
             action.timeout = setTimeout(async () => {
-                await this.release(user, msg, config);
-            }, time * 60 * 1000);
+                await this.release(action.user, action.msg, action.config);
+            }, timeInMs);
         }
 
         this.jail.set(key, action);
@@ -70,7 +156,9 @@ export default class RoleManager {
     }
 
     release = async (user: Discord.GuildMember, msg: Discord.Message, config: DefinedSettings, vote: boolean = false) => {
+        await this.ready;
         const key = user.guild.id + user.id;
+
         if (!this.jail.has(key)) return;
 
         const action = this.jail.get(key)!;
