@@ -14,12 +14,13 @@ export default class RoleManager {
         this.actionStorage = storage.create({
             dir: this.STORAGE_PATH
         });
-        this.actionStorage.init();
 
         let onReady: () => void;
         this.ready = new Promise((resolve) => {onReady = resolve});
-        this.rebuildState(client).then(() => {
-            onReady();
+        this.actionStorage.init().then(() => {
+            this.rebuildState(client).then(() => {
+                onReady();
+            });
         });
     }
 

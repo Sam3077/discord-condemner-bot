@@ -149,6 +149,10 @@ process.on('SIGINT', async () => {
     await manager.dumpStateToStorage();
     process.exit();
 });
+process.on("SIGTERM", async () => {
+    await manager.dumpStateToStorage();
+    process.exit();
+});
 process.on('SIGUSR1', async () => {
     await manager.dumpStateToStorage();
     process.exit();
@@ -163,4 +167,4 @@ process.on('uncaughtException', async (e) => {
     process.exit();
 });
 
-client.login(privateConfig['test-token']);
+client.login(privateConfig['token']);
