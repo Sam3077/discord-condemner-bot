@@ -2,6 +2,7 @@ import Discord from 'discord.js';
 import Config, {isSettings} from '../models/settings';
 import config from '../config.json';
 import storage from 'node-persist';
+import { isUndefined } from 'util';
 
 export default class GuildManager {
     private STORAGE_PATH = './data/guild-configs'
@@ -47,9 +48,18 @@ export default class GuildManager {
         }
     }
 
+    checkExitWrapper = (toCheck: string, channel: Discord.TextChannel) => {
+        if (toCheck === "cancel" || toCheck === "exit") {
+            channel.send("Okay, type `!condemner init` to restart initialization at any time!");
+            return true;
+        }
+        return false;
+    }
+
     initialize = async (guild: Discord.Guild, channel: Discord.TextChannel, initializerId: string) => {
+        await channel.send("Starting initialization. Send `cancel` or `exit` at any time to exit.");
         const roleName = (await this.ask("What is the name of the \"jail\" role?", channel, initializerId))?.content;
-        if (!roleName) return;
+        if (!roleName || this.checkExitWrapper(roleName, channel)) return;
 
         let role = guild.roles.cache.find(role => role.name === roleName);
         if (!role) {
@@ -64,6 +74,7 @@ export default class GuildManager {
 
         let rolesToSave: string[] = [];
         if (savedRoleList !== 'no') {
+            if (this.checkExitWrapper(savedRoleList, channel)) return;
             const savedRoleNames = savedRoleList.split(",").map(r => r.trim());
             const savedRoles = savedRoleNames.map(name => guild.roles.cache.find(r => r.name === name));
             const notFound = savedRoles.map((val, index) => {
@@ -78,6 +89,27 @@ export default class GuildManager {
             }
 
             rolesToSave = savedRoleNames;
+        }
+
+        let maxTimeRes = await this.ask("What's the max amount of time (in minutes) that a user should be able to condemn someone else for? Send \"no\" for no time limit.\nNote that admins are exempt from this restriction", channel, initializerId, false);
+        let maxTime;
+        if (isUndefined(maxTimeRes)) {
+            maxTime = Number.NaN;
+        } else if (maxTimeRes.content.toLowerCase() === 'no') {
+            maxTime = Number.POSITIVE_INFINITY;
+        } else {
+            maxTime = parseFloat(maxTimeRes.content);
+        }
+        let retryCount = 0;
+        while (isNaN(maxTime)) {
+            if (retryCount > 4) {
+                await channel.send("Exiting initialization for now. Type `!condemner init` at any point to restart initialization.");
+                return;
+            }
+            if (maxTimeRes && this.checkExitWrapper(maxTimeRes.content, channel)) return;
+            maxTimeRes = await this.ask("Please respond with only a number (in minutes) that a user should be able to condemn someone else for.", channel, initializerId, false);
+            maxTime = isUndefined(maxTimeRes) ? Number.NaN : Number.parseFloat(maxTimeRes.content);
+            retryCount++;
         }
 
         const condemnRes = await this.ask("Do you want me to post an attachment (photo, gif, etc.) when a user is condemned?\nRespond with the attachment or \"no\".", channel, initializerId);
@@ -99,7 +131,8 @@ export default class GuildManager {
             "jail-role": role.name,
             "save-roles": rolesToSave,
             "arrest-photo": jailAttach?.attachment.toString(),
-            "free-photo": freeAttach?.attachment.toString()
+            "free-photo": freeAttach?.attachment.toString(),
+            "max-time": maxTime
         }
 
         await this.guildStorage.setItem(guild.id, settings);
@@ -134,16 +167,18 @@ Remember, you can always run \`${config.prefix} ${config["init-command"]}\` if y
         });
     }
 
-    private ask = async (message: string, channel: Discord.TextChannel, fromId: string) => {
+    private ask = async (message: string, channel: Discord.TextChannel, fromId: string, exitOnNoResponse = true) => {
         await channel.send(message);
         const response = (await channel.awaitMessages((m) => m.author.id === fromId, {max: 1, time: 30000})).first();
-        if (!response) {
+        if (!response && exitOnNoResponse) {
             await channel.send("No response. Exiting initialization");
-            return null
+            return
         }
-        return {
-            content: response.content.trim(),
-            original: response
+        if (response) { 
+            return {
+                content: response.content.trim(),
+                original: response
+            }
         }
     }
 

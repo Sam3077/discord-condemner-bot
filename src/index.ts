@@ -1,4 +1,4 @@
-import Discord, { Role } from 'discord.js';
+import Discord from 'discord.js';
 import config from './config.json';
 import privateConfig from './private-config.json';
 import RoleManager from './managers/RoleManager';
@@ -14,6 +14,11 @@ client.on('ready', () => {
     // the role manager can attempt to send a message immediately after initialization
     // so wait until the client is ready
     manager = new RoleManager(client);
+    client.user?.setStatus('online');
+    client.user?.setActivity({
+        name: "!condemner help",
+        type: "PLAYING"
+    });
 });
 
 client.on('guildCreate', guild => {
@@ -77,10 +82,14 @@ ${config.prefix} ${config['admin-free']} @user: Same as ${config['free-command']
         }
 
         const args = msg.content.split(' ').filter(cont => cont);
-        const time = args[args.length - 1];
+        const time = parseFloat(args[args.length - 1]);
 
+        if (time > guildConfig["max-time"]/* && !msg.member?.hasPermission("ADMINISTRATOR") */) {
+            msg.reply(`You can only condemn users for up to ${guildConfig['max-time']} minutes`);
+            return;
+        }
         const promises = users.map(user => {
-            return manager.arrest(user, msg.guild!, msg, guildConfig, parseFloat(time), true);
+            return manager.arrest(user, msg.guild!, msg, guildConfig, time, true);
         });
         await Promise.all(promises);
         return;
@@ -167,4 +176,4 @@ process.on('uncaughtException', async (e) => {
     process.exit();
 });
 
-client.login(privateConfig['token']);
+client.login(privateConfig['test-token']);

@@ -5,7 +5,8 @@ export default interface Settings {
     "jail-role"?: string,
     "save-roles"?: string[],
     "arrest-photo"?: string,
-    "free-photo"?: string
+    "free-photo"?: string,
+    "max-time"?: number
 }
 
 interface DefinedSettings {
@@ -13,7 +14,8 @@ interface DefinedSettings {
     "jail-role": string,
     "save-roles": string[],
     "arrest-photo"?: string,
-    "free-photo"?: string
+    "free-photo"?: string,
+    "max-time": number
 }
 
 function isSettings(obj: any): obj is Settings {
@@ -21,7 +23,7 @@ function isSettings(obj: any): obj is Settings {
 }
 
 function isDefinedSettings(obj: Settings): obj is DefinedSettings {
-    return obj.initialized && obj['jail-role'] !== undefined && obj['save-roles'] !== undefined;
+    return obj.initialized && obj['jail-role'] !== undefined && obj['save-roles'] !== undefined && obj['max-time'] !== undefined;
 }
 
 export {DefinedSettings, isDefinedSettings, isSettings};

@@ -3,6 +3,7 @@ import CondemnAction, {SerailizeableCondemnAction, toSerailizeableCondemnAction,
 import {DefinedSettings} from '../models/settings';
 import storage from 'node-persist';
 
+const VOTE_LENGTH = 60000;
 export default class RoleManager {
     private jail: Map<string, CondemnAction>;
     private actionStorage: storage.LocalStorage;
@@ -104,7 +105,7 @@ export default class RoleManager {
                 
         if (doVote) {
             const sent = await msg.channel.send(`A vote to condemn ${user.displayName} has started. You have 1 minute to react to this message to vote.`);
-            if (!(await this.vote(sent))) {
+            if (!(await this.vote(sent, VOTE_LENGTH))) {
                 await msg.channel.send(`Vote has failed. ${user.displayName} will not be sent to ${role.name}`);
                 return;
             }
@@ -165,7 +166,7 @@ export default class RoleManager {
         const action = this.jail.get(key)!;
         if (vote) {
             const sent = await msg.channel.send(`Shall ${action.user.displayName} be released from ${config["jail-role"]}? You have 1 minute to react to this message to vote.`);
-            if (!(await this.vote(sent))) {
+            if (!(await this.vote(sent, VOTE_LENGTH))) {
                 msg.channel.send(`Vote has failed. ${action.user.displayName} will not be released from ${config["jail-role"]}`)
                 return;
             }
@@ -188,15 +189,15 @@ export default class RoleManager {
         });
     }
 
-    private vote = (msg: Discord.Message) =>  new Promise(async (resolve, reject) => {
+    private vote = (msg: Discord.Message, time: number) =>  new Promise(async (resolve, reject) => {
             await msg.react("❎");
-            await msg.react("✅")
+            await msg.react("✅");
             setTimeout(() => {
                 const reactions = msg.reactions.cache.array();
                 const yay = reactions.find(react => react.emoji.name == "✅")?.count;
                 const nay = reactions.find(react => react.emoji.name == "❎")?.count;
 
                 msg.delete().then(() => resolve(yay && nay && yay > 1 && yay > nay));
-            }, 60000);
+            }, time);
         });
 }
