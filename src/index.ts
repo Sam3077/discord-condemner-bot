@@ -84,7 +84,7 @@ ${config.prefix} ${config['admin-free']} @user: Same as ${config['free-command']
         const args = msg.content.split(' ').filter(cont => cont);
         const time = parseFloat(args[args.length - 1]);
 
-        if (time > guildConfig["max-time"]/* && !msg.member?.hasPermission("ADMINISTRATOR") */) {
+        if (time > guildConfig["max-time"] && !msg.member?.hasPermission("ADMINISTRATOR")) {
             msg.reply(`You can only condemn users for up to ${guildConfig['max-time']} minutes`);
             return;
         }
