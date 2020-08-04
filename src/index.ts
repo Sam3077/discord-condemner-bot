@@ -41,7 +41,7 @@ client.on('message', async (msg) => {
         msg.reply(`Available commands are:
 ${config.prefix} ${config["help-command"]}: Displays available commands
 
-${config.prefix} ${config['arrest-command']} @user [optional time in minutes]: Places a user in the "jail" role. If a time is provided, they will automatically be released after the given time expires
+${config.prefix} ${config['arrest-command']} @user [time in minutes]: Places a user in the "jail" role. If a time is provided, they will automatically be released after the given time expires
 
 ${config.prefix} ${config["free-command"]} @user: Releases a user from the "jail" role.
 
@@ -84,8 +84,18 @@ ${config.prefix} ${config['admin-free']} @user: Same as ${config['free-command']
         const args = msg.content.split(' ').filter(cont => cont);
         const time = parseFloat(args[args.length - 1]);
 
-        if (time > guildConfig["max-time"] && !msg.member?.hasPermission("ADMINISTRATOR")) {
-            msg.reply(`You can only condemn users for up to ${guildConfig['max-time']} minutes`);
+        const violatesTimeConstraint = (
+            // if they entered a number that's too high
+            (!isNaN(time) && time > guildConfig['max-time']) ||
+            // or they didn't enter a number and there's a limit
+            (isNaN(time) && guildConfig['max-time'] !== Number.POSITIVE_INFINITY)
+        );
+        if (violatesTimeConstraint) {
+            let res = `You can only condemn users for up to ${guildConfig['max-time']} minutes.`
+            if (isNaN(time)) {
+                res += `\nPlease use the command format "${config.prefix} ${config["arrest-command"]} @user [time in minutes]"`;
+            }
+            msg.reply(res);
             return;
         }
         const promises = users.map(user => {

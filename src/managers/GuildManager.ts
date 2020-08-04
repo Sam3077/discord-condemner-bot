@@ -91,7 +91,7 @@ export default class GuildManager {
             rolesToSave = savedRoleNames;
         }
 
-        let maxTimeRes = await this.ask("What's the max amount of time (in minutes) that a user should be able to condemn someone else for? Send \"no\" for no time limit.\nNote that admins are exempt from this restriction", channel, initializerId, false);
+        let maxTimeRes = await this.ask("What's the max amount of time (in minutes) that a user should be able to condemn someone else for? Send \"no\" for no time limit.", channel, initializerId, false);
         let maxTime;
         if (isUndefined(maxTimeRes)) {
             maxTime = Number.NaN;
