@@ -30,3 +30,8 @@ You'll need to do this before testing you local code or if you want to create yo
 
 ## Known issues
 - if the bot goes down while a vote is active, the vote will never conclude.
+
+## Planned improvements
+- add `settings` command to show server settings
+- allow settings to be updated one at a time rather than all at once (after initial initialization)
+- allow vote time customization
